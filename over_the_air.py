@@ -103,10 +103,10 @@ def dec2bin(v: int):
 
     return "".join(b)
 
-class OTA():
+class OTAEmitter():
     """
         Represents an over-the-air communications
-        management object.
+        emission object.
     """
     def __init__(self, bit_length, byte_sep):
         """Constructor for OTA object."""
@@ -132,14 +132,13 @@ class OTA():
         sound_instructions = self.get_bit_play_instructions(bitstr, padded)
         self.tone_player.play_instructions(*sound_instructions)
 
-    def emit_byte_series(self, lst_bitstrs):
+    def emit_byte_series(self, lst_bitstrs, padded = True):
         """
             Plays a series of bytes
         """
-        assert all(len(x) == 8 and all(c in "01" for c in x) for x in lst_bitstrs), "All sequences must be valid bytes."
         sound_instructions = []
         for bitstr in lst_bitstrs:
-            sound_instructions.extend(self.get_bit_play_instructions(bitstr, True) + [sound_off(self.byte_sep)])
+            sound_instructions.extend(self.get_bit_play_instructions(bitstr, padded) + [sound_off(self.byte_sep)])
 
         self.tone_player.play_instructions(*sound_instructions)
         
@@ -148,10 +147,12 @@ class OTA():
         charbytes = list(map(dec2bin, [ord(c) for c in string]))
         self.emit_byte_series(charbytes)
 
-    def config_instructions(self):
+    def emit_config(self):
         """Encode config info to sound and play it."""
-        # First, emit 10 alternating bits, twice
-        self.emit_bits("10" * 10, padded = False)
+        # First, emit 10 alternating bits, three times
+        self.emit_byte_series(["10" * 5] * 3, False)
+
+
 
 # --- TESTING ---
 
@@ -185,11 +186,12 @@ def test_timing():
     print(f"Ratio: {abs(ttlen - ttaken)/ttlen}%.")
 
 def test_byte_emission():
-    ota = OTA(0.08, 1)
-    ota.emit_string("a")
+    ota = OTAEmitter(0.08, 0.5)
+    ota.emit_config()
+    # TODO add compression
+    ota.emit_string("hello world")
 
 def main():
-    test_timing()
     test_byte_emission()
     time.sleep(1)
     
